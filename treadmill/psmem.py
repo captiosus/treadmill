@@ -62,7 +62,7 @@ def get_thread_id(pid):
 
 def get_threads(pid):
     """Read number of threads designated in /proc/<pid>/status"""
-    return proc_readlines(pid, 'status')[26][8:-1]
+    return int(proc_readlines(pid, 'status')[26][8:-1].strip())
 
 
 def get_mem_stats(pid, use_pss=True):
@@ -155,7 +155,7 @@ def get_memory_usage(pids, verbose=False, exclude=None, use_pss=True):
     """Returns memory stats for list of pids, aggregated by cmd line."""
     # TODO: pylint complains about too many branches, need to refactor.
     # pylint: disable=R0912
-    meminfos = {}
+    meminfos = []
 
     for pid in pids:
         thread_id = int(get_thread_id(pid))
@@ -180,9 +180,8 @@ def get_memory_usage(pids, verbose=False, exclude=None, use_pss=True):
             if match:
                 continue
 
-        meminfos[thread_id] = {}
-
-        meminfo = meminfos[thread_id]
+        meminfo = {}
+        meminfo['tgid'] = thread_id
         meminfo['name'] = cmd
         try:
             private, shared, have_pss = get_mem_stats(pid, use_pss=use_pss)
@@ -200,5 +199,6 @@ def get_memory_usage(pids, verbose=False, exclude=None, use_pss=True):
         meminfo['private'] = meminfo.setdefault('private', 0) + private
         meminfo['threads'] = get_threads(pid)
         meminfo['total'] = meminfo['private'] + meminfo['shared']
+        meminfos.append(meminfo)
 
     return meminfos
